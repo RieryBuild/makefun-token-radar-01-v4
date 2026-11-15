@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Radar — pre-token protocols priced off the tokens that trade</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead-inner">
+    <div>
+      <p class="eyebrow">DefiLlama snapshot &middot; <span id="asof">—</span> &middot; radar-4</p>
+      <h1>Token Radar</h1>
+      <p class="lede">Every protocol with no token, priced off the tokens that already trade — and a farm plan for each one, netted to the dollar per $1,000 of capital.</p>
+    </div>
+    <dl class="stats" id="stats">
+      <div><dt>Protocols in snapshot</dt><dd id="stat-total">—</dd></div>
+      <div><dt>Ranked, no token yet</dt><dd id="stat-board">—</dd></div>
+      <div><dt>Set aside, with reason</dt><dd id="stat-setaside">—</dd></div>
+      <div><dt>Already trading</dt><dd id="stat-live">—</dd></div>
+    </dl>
+  </div>
+</header>
+<main>
+  <section class="panel model" id="model">
+    <h2>How the radar prices a launch</h2>
+    <p class="formula">implied value = 10<sup>(a + b &middot; log<sub>10</sub> TVL)</sup> &times; growth &times; maturity &times; chains</p>
+    <p>The curve is fitted to the snapshot&rsquo;s own traded tokens — <span id="fit-line">—</span> — not typed in by hand. Every factor comes from the protocol&rsquo;s own record: its TVL, its seven-day growth, how long it has run with no token, and how many chains it runs on. No protocol&rsquo;s name ever changes its score. Each row also carries the band the backtest earns: the leave-one-out median miss, so a value of $10M is shown as roughly $3M&ndash;$34M, not as a false precision.</p>
+    <div class="model-grid">
+      <div>
+        <h3>The fit, tested</h3>
+        <table class="mini" id="fit-table"><tbody></tbody></table>
+        <h3>What was tried and dropped</h3>
+        <table class="mini" id="drop-table"><tbody></tbody></table>
+        <p class="fine" id="best-hour">—</p>
+      </div>
+      <div>
+        <h3>The traded tokens and the curve</h3>
+        <div id="scatter" class="scatter" role="img" aria-label="Scatter plot of traded tokens against the fitted launch curve"></div>
+        <p class="fine">Grey dots: the traded tokens, market cap against TVL. Dashed line: the fitted curve. Pale band: the leave-one-out median miss, the same band each board row carries.</p>
+        <h3>Farm economics, stated</h3>
+        <ul class="notes" id="econ-notes"></ul>
+        <h3>Growth &amp; maturity</h3>
+        <ul class="notes">
+          <li>Growth: 7-day change clamped to &minus;60%&hellip;+120%, half weight — tested as a fitted effect first, and it missed worse, so it stays an adjustment.</li>
+          <li>Maturity: 0.60 at listing, rising to 1.00 after 3 years with no token — tested as a fitted effect first, and it missed worse.</li>
+          <li>Chains: +2% per extra chain, capped at +10% — tested as a fitted effect first, and it missed worse.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="board-panel">
+    <div class="tabs" id="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="board" role="tab">No token yet <span id="tab-board-count"></span></button>
+      <button type="button" class="tab" data-tab="setaside" role="tab">Set aside <span id="tab-setaside-count"></span></button>
+      <button type="button" class="tab" data-tab="traded" role="tab">Token trades <span id="tab-traded-count"></span></button>
+    </div>
+
+    <div class="tabpane" id="pane-board">
+      <div class="board-head">
+        <h2>The board <span class="count" id="row-count"></span></h2>
+        <p class="hint">Click a row for its detail, model working and farm plan. The band is the backtest&rsquo;s median miss; the $1K slice is what $1,000 of capital would take.</p>
+      </div>
+      <div class="controls" id="controls">
+        <label>Search <input id="q" type="search" placeholder="Protocol name or slug&hellip;" autocomplete="off"></label>
+        <label>Category <select id="category"><option value="all">All categories</option></select></label>
+        <label>Chain <select id="chain"><option value="all">All chains</option></select></label>
+        <label>Verdict <select id="verdict"><option value="all">All verdicts</option><option value="FARM">FARM</option><option value="THIN">THIN</option><option value="SKIP">SKIP</option></select></label>
+        <label class="check"><input id="watchonly" type="checkbox"> Watchlist only</label>
+        <label>Sort <select id="sort">
+          <option value="implied">Implied value</option>
+          <option value="net1k">Net per $1,000</option>
+          <option value="perhour">Net per hour</option>
+          <option value="slice">$1K slice</option>
+          <option value="tvl">TVL</option>
+          <option value="growth">7-day growth</option>
+          <option value="age">Age</option>
+          <option value="name">Name</option>
+        </select></label>
+      </div>
+      <div class="table-wrap">
+        <table class="board" id="board">
+          <thead>
+            <tr>
+              <th class="num">Rank</th>
+              <th>Protocol</th>
+              <th>Category</th>
+              <th>Chains</th>
+              <th class="num">TVL</th>
+              <th class="num">7d</th>
+              <th class="num">Age</th>
+              <th class="num">Implied</th>
+              <th class="bandcol">Value band</th>
+              <th class="num">$1K slice</th>
+              <th class="num">Net / $1K</th>
+              <th class="num">Net / hour</th>
+              <th>Verdict</th>
+            </tr>
+          </thead>
+          <tbody id="board-body"></tbody>
+        </table>
+        <p class="empty" id="empty" hidden>No protocol matches that filter. <button type="button" id="clear">Clear filters</button></p>
+      </div>
+    </div>
+
+    <div class="tabpane" id="pane-setaside" hidden>
+      <div class="board-head">
+        <h2>Set aside — audited, not ranked</h2>
+        <p class="hint">These <span id="setaside-count">—</span> protocols record no token, but the house rule keeps them off the launch list: each is a wrapped or staked product, a versioned pool, an exchange product, or in an excluded category. They are counted here so none of the snapshot&rsquo;s <span id="pretoken-count">—</span> token-less protocols goes missing — and none of them is priced as a launch.</p>
+      </div>
+      <p class="fine" id="setaside-reasons"></p>
+      <div class="table-wrap">
+        <table class="board" id="setaside-table">
+          <thead>
+            <tr>
+              <th>Protocol</th>
+              <th>Category</th>
+              <th>Chains</th>
+              <th class="num">TVL</th>
+              <th class="num">7d</th>
+              <th class="num">Age</th>
+              <th>Why it is set aside</th>
+            </tr>
+          </thead>
+          <tbody id="setaside-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tabpane" id="pane-traded" hidden>
+      <div class="board-head">
+        <h2>Already trading — shown at the market&rsquo;s value, never ranked</h2>
+        <p class="hint">These protocols have a token that trades, so the radar does not score them. All <span id="traded-count">—</span> are listed, largest market cap first; the <span id="comp-count">—</span> with a market cap above zero are also the comparables the launch curve is fitted to.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="board live" id="live">
+          <thead>
+            <tr>
+              <th>Protocol</th>
+              <th>Category</th>
+              <th>Chains</th>
+              <th class="num">TVL</th>
+              <th class="num">Market cap</th>
+              <th class="num">7d</th>
+            </tr>
+          </thead>
+          <tbody id="live-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel detail" id="detail" hidden>
+    <div class="detail-head">
+      <div>
+        <p class="eyebrow">Rank <span id="d-rank">—</span> &middot; <span id="d-cat">—</span></p>
+        <h2 id="d-name">—</h2>
+      </div>
+      <button type="button" id="d-close" class="button">Close</button>
+    </div>
+    <dl class="kv" id="d-stats"></dl>
+    <h3>The model&rsquo;s working</h3>
+    <table class="mini breakdown" id="d-model"><tbody></tbody></table>
+    <h3>Farm economics, per $1,000</h3>
+    <table class="mini breakdown" id="d-econ"><tbody></tbody></table>
+    <h3>Farm plan</h3>
+    <ol class="steps" id="d-steps"></ol>
+  </section>
+
+  <footer class="panel note">
+    <h2>Read this before farming</h2>
+    <p>&ldquo;Pre-token&rdquo; means the protocol&rsquo;s record carries no token — no market cap, no CoinGecko id, no symbol — not that it has promised one. Implied value is a ranking model fitted to traded tokens, not a price prediction: it says which launch would be biggest if it happened, not that it will happen or what a token would trade at. The farm net is a scenario — 10% of the implied value shared pro-rata by TVL among depositors, on a $1,000 position — not a promise of any payout. Airdrops are never guaranteed, claims never ask you to pay, and the farm plans above are starting points, not advice. Verify every link on the protocol&rsquo;s own site before you connect a wallet.</p>
+  </footer>
+</main>
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
